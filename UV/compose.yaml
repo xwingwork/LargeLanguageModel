@@ -1,0 +1,3 @@
+services:
+  uv:
+    image: ghcr.io/astral-sh/uv:0.7.12
