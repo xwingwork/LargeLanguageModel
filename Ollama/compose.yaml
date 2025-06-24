@@ -1,5 +1,5 @@
 services:
-  uv:
+  ollama:
     image: ollama/ollama
     volumes:
       - .data:/root/.ollama

@@ -12,3 +12,7 @@
 
 參數量與需求規格
 <https://github.com/ollama/ollama?tab=readme-ov-file#model-library>
+
+## API
+
+<https://github.com/ollama/ollama/blob/main/docs/api.md>
