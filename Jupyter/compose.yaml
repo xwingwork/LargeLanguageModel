@@ -1,0 +1,96 @@
+name: build-llm
+
+services:
+  # ******************
+  # 自建堆疊
+  # 基底用 python，會較 jupyter 提供的輕量(3.65gb vs 15.85gb)
+  # ****************** 
+  ubuntu_python3.9_tensorflow:
+    image: ${ARTIFACTORY_HOSTED}local/${PYTHON_SOURCE_IMAGE}
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}${PYTHON_SOURCE_IMAGE}
+
+        # 首先升級 pip
+        RUN pip install --no-cache-dir --upgrade pip
+        # https://jupyterlab.readthedocs.io/en/stable/user/language.html#language-packs；https://github.com/jupyterlab/language-packs/tree/main/language-packs
+        RUN pip install --no-cache-dir \
+            nodejs jupyterlab \
+            jupyterlab-language-pack-zh-TW
+        # 安裝必要的Python套件
+        RUN pip install --no-cache-dir \
+            tensorflow pandas scikit-learn
+        # RUN pip install --no-cache-dir \
+        #     tf-nightly
+
+        # 避免使用root
+        RUN useradd -m jovyan
+        ENV HOME=/home/jovyan
+        WORKDIR /home/jovyan
+        USER jovyan
+
+        # 執行並監聽 Jupyter Lab 的端口[8888]
+        CMD ["jupyter-lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook    
+    volumes:
+      - .data/ubuntu_python3.9_tensorflow:/home/jovyan
+      # IAC，檔案路徑透過[jupyter lab path]查，或是建立image時[jupyter lab path--app-dir JUPYTERLAB_DIR]指定 https://jupyterlab.readthedocs.io/en/stable/user/directories.html#overrides-json
+      - ./config/lab/overrides.json:/usr/local/share/jupyter/lab/settings/overrides.json
+      - ./script:/home/jovyan/script
+    ports:
+      - 8888:8888
+
+  # ******************
+  # jupyterlab 官方建置的 image。https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html
+  # image 存放在紅帽的 Hub：https://quay.io/organization/jupyter。(例如：quay.iojupyter/minimal-notebook:ubuntu-22.04) 
+  # ****************** 
+  python3.12_tensorflow_cuda-ubuntu:
+    image: ${ARTIFACTORY_HOSTED}local/${TENSORFLOW_CUDA_UBUNTU_IMAGE}
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}jupyter/${TENSORFLOW_CUDA_UBUNTU_IMAGE}
+        # 首先升級 pip
+        RUN pip install --no-cache-dir --upgrade pip
+        # https://jupyterlab.readthedocs.io/en/stable/user/language.html#language-packs；https://github.com/jupyterlab/language-packs/tree/main/language-packs
+        RUN pip install --no-cache-dir \
+            jupyterlab-language-pack-zh-TW
+    environment:
+      # - JUPYTER_PASSWORD=e625ffecdc048020360c6e408c45f9dbfc475f11aa19251ce1cf0b867fed39e3
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook
+      # 設定容器內與主機系統的使用者匹配，防止存取掛載檔案時出現權限問題 
+      # - NB_UID=$(id -u) # 使用者ID(UID)
+      # - NB_GID=$(id -g) # 群組ID(GID)
+      # [非官方]可重複研究：https://github.com/iot-salzburg/reproducible-research-with-gpu-jupyter?tab=readme-ov-file#reproduce-a-deep-learning-experiment      
+      # - GRANT_SUDO=yes # 授予 Jupyter 使用者 sudo 權限
+    volumes:
+      - .data/python3.12_tensorflow_cuda-ubuntu:/home/jovyan
+      - ${LAB_CONFIG}:${CONDA_LAB_CONFIG} # 官方建置是透過 conda，路經會與 pip 安裝的不同
+      - ./script:/home/jovyan/script
+    ports:
+      - 8889:8888
+
+  python3.12_pytorch_cuda-ubuntu:   
+    image: ${ARTIFACTORY_HOSTED}local/${PYTORCH_CUDA_UBUNTU_IMAGE}
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}jupyter/${PYTORCH_CUDA_UBUNTU_IMAGE}
+        # 首先升級 pip
+        RUN pip install --no-cache-dir --upgrade pip
+        # https://jupyterlab.readthedocs.io/en/stable/user/language.html#language-packs；https://github.com/jupyterlab/language-packs/tree/main/language-packs
+        RUN pip install --no-cache-dir \
+            jupyterlab-language-pack-zh-TW
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook
+    volumes:
+      - .data/python3.12_pytorch_cuda-ubuntu:/home/jovyan
+      - ${LAB_CONFIG}:${CONDA_LAB_CONFIG} # 官方建置是透過 conda，路經會與 pip 安裝的不同
+      - ./script:/home/jovyan/script
+    ports:
+      - 8890:8888
