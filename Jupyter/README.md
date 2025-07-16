@@ -18,7 +18,7 @@
 
 - 從 python 3.9 開始堆疊
   - <http://localhost:8888/?token=e625ffecdc048020360c6e408c45f9dbfc475f11aa19251ce1cf0b867fed39e3>
-- 官方(jupyter lab)提供的 tensorflow (google) 開發環境
+- 官方(jupyter lab)提供的 [tensorflow (google)](TensorFlow.md) 開發環境
   - <http://localhost:8889/?token=e625ffecdc048020360c6e408c45f9dbfc475f11aa19251ce1cf0b867fed39e3>
 - 官方(jupyter lab)提供的 pyTorch (aws) 開發環境
   - <http://localhost:8890/?token=e625ffecdc048020360c6e408c45f9dbfc475f11aa19251ce1cf0b867fed39e3>
