@@ -1,0 +1,15 @@
+# [fastapi]是網頁的路由器框架
+fastapi==0.115.14
+# [uvicorn]是非同步的網頁服務運行框架，實現非同步[原本採用 WSGI (Web Server Gateway Interface) 同步協議]
+# [standagd]會同時安裝額外套件(推薦的配置)，不然會少[uvloop]、[httptools]，要額外自己安裝
+# [uvloop]-Cython 編寫的 asyncio 事件循環替代方案，更快
+# [httptools]-Cython 編寫的，比Python標準庫的 HTTP 解析器更快，有助於實現高性能
+uvicorn[standagd]
+requests # 發起網路請求[request]
+sqlmodel # SQL 類型的資料庫通訊模組
+# Postgres 資料庫的通訊模組
+psycopg[binary] # [binary]二進位儲存模組
+langgraph
+langgraph-supervisor
+langchain
+langchain-openai

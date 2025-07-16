@@ -1,0 +1,115 @@
+name: lang
+
+services:
+  # ******************
+  # 資料庫服務
+  # ****************** 
+  db.postgres:
+    image: ${ARTIFACTORY_HOST}postgres:17.5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER?Variable not set} # 避免使用預設主機帳號[postgres]，作為預設登入的帳號
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set} # 必備
+      POSTGRES_DB: ${POSTGRES_DB?Variable not set} # 指定預設建立的資料庫名稱，採用預設名稱時，POSTGRES_USER會建立與此同名身份
+      PGDATA: /pgdata # 預設為/var/lib/postgresql/data 
+    restart: always
+    shm_size: 128mb
+    volumes:
+      - type: tmpfs  # 無法使用[source]指定存放位置，會去索取並建立volume
+        target: /dev/shm
+        tmpfs:
+          size: 134217728 # 128*2^20 bytes = 128Mb
+      - .data:/pgdata 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  # 資料庫Client
+  adminer:  
+    image: ${ARTIFACTORY_HOST}adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db.postgres
+    restart: always
+    ports:
+     - 18080:8080
+    depends_on:
+      - db.postgres
+
+  # ******************
+  # langchain
+  # ****************** 
+  langchain.web:
+    image: ${ARTIFACTORY_HOSTED}local/langchain.web
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}${PYTHON_SOURCE_IMAGE}
+
+        # 內建輕量級的隔離環境工具，虛擬環境避免套件衝突
+        RUN python -m venv /opt/venv/
+        # 執行、[pip]安裝時，都會優先使用虛擬環境
+        ENV PATH="/opt/venv/bin:$PATH"
+
+        # 指定工作區
+        WORKDIR /app
+        
+        # 複製套件設定檔
+        COPY requirements.txt /tmp/requirements.txt
+        # 依照設定檔安裝套件
+        RUN pip install -r /tmp/requirements.txt
+
+        CMD ["python","-m","http.server","8000"]
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # [--reload]才會將修改生效
+    # develop: # 要[compose]執行時給[-watch]才會生效
+    #   watch:
+    #     - path: ./src
+    #       action: restart
+    #     - action: rebuild
+    #       path: requirements.txt
+    environment:
+      SQL_SERVER_DB_CONNECTION: ${SQL_SERVER_DB_CONNECTION}
+    env_file:
+      - ./environment/emailer.env      
+      - ./environment/openAIHub.env
+      - ./environment/openAIHub_key.env
+    volumes:
+      - ./src:/app
+    ports:
+      - 9001:8000
+    depends_on:
+      - db.postgres
+
+  # ******************
+  # 自建堆疊
+  # 基底用 python，會較 jupyter 提供的輕量(3.65gb vs 15.85gb)
+  # ****************** 
+  langchain.stack:
+    image: ${ARTIFACTORY_HOSTED}local/langchain
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}${PYTHON_SOURCE_IMAGE}
+
+        # 首先升級 pip
+        RUN pip install --no-cache-dir --upgrade pip
+        RUN pip install --no-cache-dir --quiet \
+            "langgraph-cli[inmem]"
+            #  langgraph langchain langchain-openai langsmith
+        
+        RUN langgraph new  path/to/your/app --template new-langgraph-project-python
+        # CMD ["/bin/sh","-c","langgraph dev"]
+        CMD ["python","-m","http.server","8000"]
+    # environment:
+    #   - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+    #   - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook    
+    # volumes:
+    #   - .data/ubuntu_python3.9_tensorflow:/home/jovyan
+    #   # IAC，檔案路徑透過[jupyter lab path]查，或是建立image時[jupyter lab path--app-dir JUPYTERLAB_DIR]指定 https://jupyterlab.readthedocs.io/en/stable/user/directories.html#overrides-json
+    #   - ./config/lab/overrides.json:/usr/local/share/jupyter/lab/settings/overrides.json
+    #   - ./script:/home/jovyan/script
+    ports:
+      - 9000:8000
+
+  langchain:
+    image: ${ARTIFACTORY_HOST}langchain/langchain:0.1.0
