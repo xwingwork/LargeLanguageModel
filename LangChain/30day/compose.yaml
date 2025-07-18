@@ -1,0 +1,29 @@
+name: 30d-llm
+
+services:
+  python3.12_scipy-notebook-ubuntu:   
+    image: ${ARTIFACTORY_HOSTED}local/${PYTHON_SOURCE_IMAGE}
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${ARTIFACTORY_HOST}jupyter/${PYTHON_SOURCE_IMAGE}
+        # 首先升級 pip
+        RUN pip install --no-cache-dir --upgrade pip
+        # https://jupyterlab.readthedocs.io/en/stable/user/language.html#language-packs；https://github.com/jupyterlab/language-packs/tree/main/language-packs
+        RUN pip install --no-cache-dir \
+            jupyterlab-language-pack-zh-TW
+            
+        # 複製套件設定檔
+        COPY requirements.txt /tmp/requirements.txt
+        # 依照設定檔安裝套件
+        RUN pip install -r /tmp/requirements.txt    
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook
+    volumes:
+      - .data:/home/jovyan
+      # TODO這裡檔案變成資料夾，導致頁面配置錯誤
+      - ${LAB_CONFIG}:${CONDA_LAB_CONFIG} # 官方建置是透過 conda，路經會與 pip 安裝的不同
+      - ./script:/home/jovyan/script
+    ports:
+      - 8891:8888
