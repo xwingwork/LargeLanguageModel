@@ -51,3 +51,8 @@ LangChain vs LangGraph：<https://www.youtube.com/watch?v=qAF1NjEVHhY>
     * Task.Summarize (摘要)
 * State (狀態)
   * 所有 Node (節點) 可存取
+
+## 可再現性
+
+* [x] 如何下載模型並安裝，讓服務可以引用
+  > `LangChain`本質是充當 OpneAI 的隔離層，讓開發者可以專心開發應用，不用擔心與 OpenAI 的 OpenAPI 串接格式的問題，不會`下載模型並安裝`(拔網路線測試過)

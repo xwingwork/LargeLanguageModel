@@ -20,6 +20,8 @@ services:
     environment:
       - JUPYTER_TOKEN=${JUPYTER_TOKEN}
       - JUPYTER_ENABLE_LAB=yes # 預設：yes，確保啟用 JupyterLab 而不是經典版的 Jupyter Notebook
+    env_file:
+      - ./openAIHub_key.env
     volumes:
       - .data:/home/jovyan
       # TODO這裡檔案變成資料夾，導致頁面配置錯誤
